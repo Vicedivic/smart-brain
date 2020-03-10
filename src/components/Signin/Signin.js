@@ -1,4 +1,6 @@
 import React from 'react';
+import axios from "axios";
+import "./Signin.css";
 
 class Signin extends React.Component {
   constructor(props) {
@@ -17,22 +19,36 @@ class Signin extends React.Component {
     this.setState({signInPassword: event.target.value})
   }
 
+  saveAuthTokenInSession = token => {
+    window.sessionStorage.setItem("token", token);
+  }
+
   onSubmitSignIn = () => {
-    fetch('http://localhost:3000/signin', {
-      method: 'post',
-      headers: {'Content-Type': 'application/json'},
+    fetch("http://localhost:3000/signin", {
+      method: "post",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: this.state.signInEmail,
         password: this.state.signInPassword
       })
     })
       .then(response => response.json())
-      .then(user => {
-        if (user.id) {
-          this.props.loadUser(user)
-          this.props.onRouteChange('home');
+      .then(data => {
+        if (data.userId && data.success) {
+          this.saveAuthTokenInSession(data.token);
+          axios(`http://localhost:3000/profile/${data.userId}`, {
+            headers: { Authorization: data.token }
+          })
+            .then(response => {
+              if (response.data && response.data.email) {
+                console.log('loading user');
+                this.props.loadUser(response.data);
+                this.props.onRouteChange("home");
+              }
+            })
+            .catch(console.log);
         }
-      })
+      });
   }
 
   render() {
